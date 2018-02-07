@@ -1,0 +1,653 @@
+acceptor bean///////////////////////////////////////////////////////////////////////
+
+<?xml version="1.0" encoding="UTF-8"?>
+<web-app xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://java.sun.com/xml/ns/javaee" xsi:schemaLocation="http://java.sun.com/xml/ns/javaee http://java.sun.com/xml/ns/javaee/web-app_3_0.xsd" id="WebApp_ID" version="3.0">
+  <display-name>RestApi</display-name>
+  <servlet>
+  <servlet-name>test</servlet-name>
+  <servlet-class>org.springframework.web.servlet.DispatcherServlet</servlet-class>
+  <load-on-startup>1</load-on-startup>
+ </servlet>
+ <servlet-mapping>
+  <servlet-name>test</servlet-name>
+  <url-pattern>/</url-pattern>
+ </servlet-mapping>
+  <welcome-file-list>
+    <welcome-file>index.html</welcome-file>
+    <welcome-file>index.htm</welcome-file>
+    <welcome-file>index.jsp</welcome-file>
+    <welcome-file>default.html</welcome-file>
+    <welcome-file>default.htm</welcome-file>
+    <welcome-file>default.jsp</welcome-file>
+  </welcome-file-list>
+</web-app>
+
+
+BDMSController///////////////////////////////////////////////////////////////////////////
+
+package com.inautix.prj;
+
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.sql.SQLException;
+import java.util.*;
+
+import javax.servlet.RequestDispatcher;
+import javax.servlet.ServletException;
+import javax.servlet.annotation.WebServlet;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
+
+@WebServlet("/control/*")
+public class BDMSController extends HttpServlet {
+
+	@Override
+	protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+
+		System.out.println("in doget");
+		resp.setContentType("html/text");
+		PrintWriter out = resp.getWriter();
+
+		DAOController dao = new DAOController();
+		HttpSession session = req.getSession();
+
+		//////////////////////////////////////////////////////////
+
+		if (req.getPathInfo().toString().equals("/login")) {
+			String username = req.getParameter("username");
+			String password = req.getParameter("password");
+			String[] arr=new String[3];
+			arr=dao.validate(username, password);
+			
+				if (arr!=null) {
+					String name=arr[0];
+					String email=arr[1];
+					String mobile=arr[2];
+					session.setAttribute("username", username);
+					session.setAttribute("name", name);
+					session.setAttribute("email", email);
+					session.setAttribute("mobile", mobile);
+					RequestDispatcher rd = req.getRequestDispatcher("/next.jsp");
+					rd.forward(req, resp);
+				} else {
+					RequestDispatcher rd = req.getRequestDispatcher("/invalid.jsp");
+					rd.forward(req, resp);
+				}
+		}
+
+		////////////////////////////////////////////////////////////////////////////
+		if (req.getPathInfo().toString().equals("/reg")) {
+			System.out.println("register");
+
+			String name = req.getParameter("name");
+			String username = req.getParameter("username");
+			String password = req.getParameter("password");
+			String email = req.getParameter("email");
+			String mobile = req.getParameter("mobile");
+
+			String uname = dao.updateInfo(name, username, password, email, mobile);
+			if (uname == "false") {
+				session.setAttribute("message", "username or email or phone number already exist or empty field");
+				resp.sendRedirect("../firstlogin.jsp");
+			}
+
+			else {
+				System.out.println(uname);
+				System.out.println("updated");
+				resp.sendRedirect("../login.jsp");
+
+			}
+			
+		}
+		
+		//////////////////////////////////////////////////////////////
+		if (req.getPathInfo().toString().equals("/register")) {
+			session.getAttribute("name");
+		     session.getAttribute("username");
+		     session.getAttribute("email");
+		     session.getAttribute("mobile");
+			resp.sendRedirect("../donorRegForm.jsp");
+			
+		}
+		
+         ////////////////////////////////////////////////////////////
+		
+		if (req.getPathInfo().toString().equals("/edit")) {
+			session.getAttribute("name");
+		     session.getAttribute("username");
+		     session.getAttribute("email");
+		     session.getAttribute("mobile");
+			resp.sendRedirect("../donorRegForm1.jsp");
+		}
+		
+		////////////////////////////////////////////////////////////
+		
+		if (req.getPathInfo().toString().equals("/edit1")) {
+			
+			String address = req.getParameter("address");
+			String locality = req.getParameter("locality");
+			String bloodgroup = req.getParameter("bloodgroup");
+			String Rh = req.getParameter("rh");
+			String age = req.getParameter("age");
+			String sex = req.getParameter("sex");
+			String DOB = req.getParameter("DOB");
+			String username=(String) session.getAttribute("username");
+			
+			boolean i=dao.changeDonorDetail(address, locality, bloodgroup, Rh, sex, age, DOB,username);
+            if(i==true){
+            	session.setAttribute("message", "record updated");
+				System.out.println("record updated");
+				resp.sendRedirect("../donorRegForm1.jsp");
+            }
+            else{
+            	session.setAttribute("message", "cant updated");
+				resp.sendRedirect("../donorRegForm1.jsp");
+            }
+
+		}
+		
+		
+		
+		/////////////////////////////////////////////////////////////////
+
+		if (req.getPathInfo().toString().equals("/uploadReg")) {
+
+			Enumeration<String> en = req.getParameterNames();
+
+			String out1 = null;
+
+			out1 = dao.DonorDetail(en, req);
+
+			if (out1 == "false") {
+
+				session.setAttribute("message", "username or email  already exist or empty field");
+				resp.sendRedirect("../donorRegForm.jsp");
+			}
+
+			else {
+
+				resp.sendRedirect("../donorForm.jsp");
+
+			}
+
+		}
+
+		////////////////////////////////////////////////////////
+		if (req.getPathInfo().toString().equals("/acceptor")) {
+			System.out.println("in acceptor");
+			String bloodgroup = req.getParameter("bloodgroup");
+			String Rh = req.getParameter("Rh");
+			String locality = req.getParameter("locality");
+			
+			List list = dao.getDonorInfo(bloodgroup, Rh, locality);
+			System.out.println(list);
+			
+			if (list == null || list.isEmpty()) {
+				
+				req.setAttribute("message", "no value found");
+				//resp.sendRedirect("../acceptor.jsp");
+				RequestDispatcher rd=req.getRequestDispatcher("/acceptor.jsp");
+				rd.forward(req, resp);
+			}
+
+			else {
+
+				req.setAttribute("list", list);
+				//resp.sendRedirect("../acceptor.jsp");
+				RequestDispatcher rd=req.getRequestDispatcher("/acceptor.jsp");
+				rd.forward(req, resp);
+
+			}
+
+		}
+
+		//////////////////////////////////////////////////////////////////
+		if (req.getPathInfo().toString().equals("/delete")) {
+			String username = (String) session.getAttribute("username");
+
+			try {
+				int delete = dao.deleteDonor(username);
+				if (delete >=1) {
+					session.setAttribute("message1", "record deleted");
+					System.out.println("record deleted");
+					resp.sendRedirect("../donorForm.jsp");
+				} else {
+					session.setAttribute("message1", "record not found");
+					resp.sendRedirect("../donorForm.jsp");
+				}
+
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+				resp.sendRedirect("../login.jsp");
+
+			}
+
+		}
+		/////////////////////////////////////////////////////////
+		if (req.getPathInfo().toString().equals("/logout")) {
+			System.out.println("logout");
+			session.invalidate();
+			resp.sendRedirect("../start.jsp");
+		}
+
+		// } else {
+		// System.out.println("Please login first");
+		// out.println("Please login first");
+		//
+		// req.getRequestDispatcher("/login.jsp").forward(req, resp);
+		// }
+
+	}
+
+	@Override
+	protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+		doGet(req, resp);
+	}
+
+}
+
+
+DAOController
+
+
+package com.inautix.prj;
+
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.Enumeration;
+import java.util.List;
+
+import javax.servlet.http.HttpServletRequest;
+
+import com.inautix.prj.MyConnection;
+
+public class DAOController {
+
+	Connection conn = MyConnection.getConn();
+	 
+
+	
+	//////////////////////insert login details into login table///////////////////
+
+	public String updateInfo(String name, String username, String password, String email, String mobile) {
+		System.out.println("in insrt");
+		String sql = "insert into login_detail_16337 values(?,?,?,?,?)";
+		PreparedStatement pstmt;
+		try {
+			pstmt = conn.prepareStatement(sql);
+			conn.createStatement();
+			System.out.println("in try");
+
+			pstmt.setString(1, name);
+			pstmt.setString(2, username);
+			pstmt.setString(3, password);
+			pstmt.setString(4, email);
+			pstmt.setString(5, mobile);
+
+			Boolean b = pstmt.execute();
+			 conn.close();  
+			return "true";
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			System.out.println("in catch");
+			return "false";
+		}
+
+	}
+
+	/////////////////validate username and password/////////////////////
+
+	/*public boolean validate(String username, String password) throws SQLException {
+		boolean st = false;
+		String sql = "select username,password from login_detail_16337 where username='" + username + "'and password='"
+				+ password + "'";
+		Statement stmt = conn.createStatement();
+		ResultSet rs = stmt.executeQuery(sql);
+
+		if (st = rs.next()) {
+			System.out.println(st);
+			return st;
+		} else
+			return false;
+	}*/
+
+	
+	
+	
+	////////////////////////////////////////////////////////////
+	public String[] validate(String username, String password) {
+
+		String sql = "select name,email,phone from login_detail_16337 where username='" + username + "'and password='"
+				+ password + "'";
+		Statement stmt;
+		String[] arr=new String[3];
+
+		try {
+
+			stmt = conn.createStatement();
+			ResultSet rs = stmt.executeQuery(sql);
+			List ls = new ArrayList();
+			while (rs.next()) {
+				arr[0]=rs.getString(1);
+				arr[1]=rs.getString(2);
+				arr[2]=rs.getString(3);
+
+			}
+			return arr;
+		}
+			catch (SQLException e) {
+				e.printStackTrace();
+				return null;
+			}
+	
+	
+		}
+	
+	////////////////////insert donor details into table//////////////////////
+
+	public String DonorDetail(Enumeration<String> en, HttpServletRequest req) {
+		System.out.println(en.toString());
+		try {
+		String sql = "insert into donor_detail_16337 values(?,?,?,?,?,?,?,?,?,?,?)";
+		PreparedStatement pstmt;
+		
+			pstmt = conn.prepareStatement(sql);
+			conn.createStatement();
+			int i = 0;
+			while (en.hasMoreElements()) {
+				i++;
+				pstmt.setString(i, req.getParameter((String) en.nextElement()));
+				System.out.println(i);
+			}
+			System.out.println(pstmt.execute());
+			return "true";
+			
+			
+		} catch (Exception e) {
+			e.printStackTrace();
+			return "false";
+		}
+
+		
+	}
+
+	/////////////////////get back donor details////////////////////
+
+	public List getDonorInfo(String bloodgroup, String Rh, String locality) {
+
+		String sql = "select * from donor_detail_16337 where blood_group='" + bloodgroup + "' and Rh_type='" + Rh
+				+ "' and locality='" + locality + "'";
+		Statement stmt;
+
+		try {
+
+			stmt = conn.createStatement();
+			ResultSet rs = stmt.executeQuery(sql);
+			List ls = new ArrayList();
+			while (rs.next()) {
+				DonarDetailBean d = new DonarDetailBean();
+
+				d.setName(rs.getString(1));
+				d.setUsername(rs.getString(2));
+				d.setEmail(rs.getString(3));
+				d.setMobile(rs.getString(4));
+				d.setAddress(rs.getString(5));
+				d.setLocality(rs.getString(6));
+				d.setBloodGroup(rs.getString(7));
+				d.setRh(rs.getString(8));
+				d.setAge(rs.getString(9));
+				d.setSex(rs.getString(10));
+				d.setDate(rs.getString(11));
+
+				ls.add(d);
+
+			}
+			return ls;
+		}
+
+		catch (SQLException e) {
+			e.printStackTrace();
+			return null;
+		}
+	}
+
+	////////////////////delete////////////////////////////////////
+	
+	public int deleteDonor(String username ) {
+		Statement stmt;
+		try {
+			stmt = conn.createStatement();
+			String sql="delete from donor_detail_16337 where username='"+username+"'";  
+			 stmt.executeUpdate(sql);
+			 int i=stmt.executeUpdate(sql);
+			 return i;
+		} catch (SQLException e) {
+			e.printStackTrace();
+			return -1;
+		}
+		
+	}
+	
+	
+	////////////////////////change donor detail/////////////////////////////////
+	public boolean changeDonorDetail(String address,String locality,String bloodgroup,String Rh,
+			String sex,String age,String DOB,String username){
+		try {
+			//stmt = conn.createStatement();
+			System.out.println("in change");
+			//String sql="update donor_detail_16337 set address='"+address+"', blood_group='" + bloodgroup + "', Rh_type='" +
+			//Rh	+ "', and locality='" + locality + "', age='"+age+"',  sex='"+sex+"' , DOB='"+DOB+"' where username='"+username+"'";  
+			 
+			
+	
+	String sql ="update donor_detail_16337 set address=?,locality=?,blood_group=?,Rh_type=?,age=?,sex=?,DOB=? where username=?";
+	PreparedStatement ps=conn.prepareStatement(sql);
+
+			 
+        ps.setString(1,address);  
+        ps.setString(2,locality);  
+        ps.setString(3, bloodgroup);  
+        ps.setString(4, Rh);  
+        ps.setString(5,age); 
+        ps.setString(6, sex);
+        ps.setString(7, DOB);
+        ps.setString(8, username);
+          System.out.println("ok");
+        boolean b=ps.execute();  
+			 return true;
+		} catch (SQLException e) {
+			e.printStackTrace();
+			return false;
+		}
+	}
+}
+
+
+DonarDetailBean
+
+package com.inautix.prj;
+
+
+public class DonarDetailBean {
+	
+	String name;
+	String username;
+	String email;
+	String mobile;
+	String address;
+	String locality;
+	String bloodGroup;
+	String rh;
+	String age;
+	String sex;
+	String date;
+	public String getName() {
+		return name;
+	}
+	public void setName(String name) {
+		this.name = name;
+	}
+	public String getUsername() {
+		return username;
+	}
+	public void setUsername(String username) {
+		this.username = username;
+	}
+	public String getEmail() {
+		return email;
+	}
+	public void setEmail(String email) {
+		this.email = email;
+	}
+	public String getMobile() {
+		return mobile;
+	}
+	public void setMobile(String mobile) {
+		this.mobile = mobile;
+	}
+	public String getAddress() {
+		return address;
+	}
+	public void setAddress(String address) {
+		this.address = address;
+	}
+	public String getLocality() {
+		return locality;
+	}
+	public void setLocality(String locality) {
+		this.locality = locality;
+	}
+	public String getBloodGroup() {
+		return bloodGroup;
+	}
+	public void setBloodGroup(String bloodGroup) {
+		this.bloodGroup = bloodGroup;
+	}
+	public String getRh() {
+		return rh;
+	}
+	public void setRh(String rh) {
+		this.rh = rh;
+	}
+	public String getAge() {
+		return age;
+	}
+	public void setAge(String age) {
+		this.age = age;
+	}
+	public String getSex() {
+		return sex;
+	}
+	public void setSex(String sex) {
+		this.sex = sex;
+	}
+	public String getDate() {
+		return date;
+	}
+	public void setDate(String date) {
+		this.date = date;
+	}
+	@Override
+	public String toString() {
+		return "DonarDetailBean [name=" + name + ", username=" + username + ", email=" + email + ", mobile=" + mobile
+				+ ", address=" + address + ", locality=" + locality + ", bloodGroup=" + bloodGroup + ", Rh=" + rh
+				+ ", age=" + age + ", sex=" + sex + ", date=" + date + "]";
+	}
+	public DonarDetailBean() {
+		super();
+		// TODO Auto-generated constructor stub
+	}
+	
+	
+	
+}
+
+
+MyConnection
+
+package com.inautix.prj;
+
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
+
+public class MyConnection {
+
+	
+	 static Connection conn;
+	 public static Connection getConn(){
+		 try {
+			DriverManager.registerDriver(new oracle.jdbc.driver.OracleDriver());
+		
+			conn = DriverManager.getConnection("jdbc:oracle:thin:@10.232.71.29:1521:INATP02", "shobana","shobana");
+	System.out.println("connected");	
+		 } catch (SQLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} 
+		 return conn;
+		
+	 }
+	
+	
+
+}
+
+
+UserBean
+
+package com.inautix.prj;
+
+public class UserBean {
+	String name;
+	String username;
+	String password;
+	String email;
+	String mobile;
+	public String getName() {
+		return name;
+	}
+	public void setName(String name) {
+		this.name = name;
+	}
+	public String getUsername() {
+		return username;
+	}
+	public void setUsername(String username) {
+		this.username = username;
+	}
+	public String getPassword() {
+		return password;
+	}
+	public void setPassword(String password) {
+		this.password = password;
+	}
+	public String getEmail() {
+		return email;
+	}
+	public void setEmail(String email) {
+		this.email = email;
+	}
+	public String getMobile() {
+		return mobile;
+	}
+	public void setMobile(String mobile) {
+		this.mobile = mobile;
+	}
+	@Override
+	public String toString() {
+		return "UserBean [name=" + name + ", username=" + username + ", password=" + password + ", email=" + email
+				+ ", mobile=" + mobile + "]";
+	}
+	
+	
+
+}
